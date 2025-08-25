@@ -17,12 +17,12 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-h1, h2 {
+h1, h2, h3, h4 {
     text-align: center;
     color: #1c2b4d;
 }
 
-h3 {
+h3, h4 {
     margin-top: 25px;
     border-bottom: 2px solid #eee;
     padding-bottom: 5px;

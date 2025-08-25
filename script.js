@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- 要素の取得 ---
+    const groupSection = document.getElementById('group-section');
+    const mainApp = document.getElementById('main-app');
+    const groupIdInput = document.getElementById('group-id-input');
+    const joinGroupBtn = document.getElementById('join-group-btn');
+    const currentGroupIdDisplay = document.getElementById('current-group-id-display');
     const setupSection = document.getElementById('setup-section');
     const expenseSection = document.getElementById('expense-section');
     const resultSection = document.getElementById('result-section');
@@ -24,11 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToExpenseBtn = document.getElementById('back-to-expense-btn');
     const resetCalculationBtn = document.getElementById('reset-calculation-btn');
 
-    // --- アプリのデータ ---
-    let participants = JSON.parse(localStorage.getItem('warikanParticipants')) || [];
-    let expenses = JSON.parse(localStorage.getItem('warikanExpenses')) || [];
+    // --- アプリのグローバル変数 ---
+    let participants = [];
+    let expenses = [];
+    let groupDocRef = null;
+    let unsubscribe = null; // リアルタイムリスナーを停止するための変数
 
     // --- イベントリスナー ---
+    joinGroupBtn.addEventListener('click', joinGroup);
     addParticipantBtn.addEventListener('click', addParticipant);
     startExpenseBtn.addEventListener('click', showExpenseSection);
     clearStorageBtn.addEventListener('click', clearAllData);
@@ -54,27 +62,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 関数定義 ---
-    function saveData() {
-        localStorage.setItem('warikanParticipants', JSON.stringify(participants));
-        localStorage.setItem('warikanExpenses', JSON.stringify(expenses));
+    function joinGroup() {
+        const groupId = groupIdInput.value.trim();
+        if (!groupId) {
+            alert('グループIDを入力してください。');
+            return;
+        }
+        groupDocRef = db.collection('groups').doc(groupId);
+        currentGroupIdDisplay.textContent = `グループID: ${groupId}`;
+
+        groupSection.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+
+        if (unsubscribe) unsubscribe();
+        
+        unsubscribe = groupDocRef.onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                participants = data.participants || [];
+                expenses = data.expenses || [];
+                renderUI();
+            } else {
+                groupDocRef.set({ participants: [], expenses: [] });
+            }
+        });
     }
 
-    function clearAllData() {
-        if (confirm('本当に保存したすべてのデータを消去しますか？この操作は元に戻せません。')) {
-            localStorage.removeItem('warikanParticipants');
-            localStorage.removeItem('warikanExpenses');
-            alert('データを消去しました。');
-            location.reload();
+    async function saveData() {
+        if (!groupDocRef) return;
+        try {
+            await groupDocRef.set({ participants, expenses });
+        } catch (error) {
+            console.error("データの保存に失敗しました: ", error);
         }
     }
 
-    function addParticipant() {
+    async function clearAllData() {
+        if (confirm('本当にこのグループの全データを消去しますか？参加している全員のデータが消えます。')) {
+            participants = [];
+            expenses = [];
+            await saveData();
+            alert('データを消去しました。');
+        }
+    }
+
+    async function addParticipant() {
         const name = participantNameInput.value.trim();
         if (name && !participants.includes(name)) {
             participants.push(name);
-            updateParticipantList();
-            saveData();
             participantNameInput.value = '';
+            await saveData();
         }
     }
 
@@ -85,11 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         setupSection.classList.add('hidden');
         expenseSection.classList.remove('hidden');
-        updatePayerSelect();
-        createParticipantCheckboxes();
     }
     
-    function addExpense() {
+    async function addExpense() {
         const payer = payerSelect.value;
         const amount = parseFloat(expenseAmountInput.value);
         const description = expenseDescInput.value.trim();
@@ -99,8 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (expenseFor === 'all') {
             involvedParticipants = [...participants];
         } else {
-            const checkedBoxes = document.querySelectorAll('#participants-checkboxes input:checked');
-            checkedBoxes.forEach(box => involvedParticipants.push(box.value));
+            document.querySelectorAll('#participants-checkboxes input:checked')
+              .forEach(box => involvedParticipants.push(box.value));
         }
 
         if (!payer || !(amount > 0) || !description) {
@@ -113,10 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         expenses.push({ payer, amount, description, for: involvedParticipants });
-        updateExpenseList();
-        saveData();
         expenseAmountInput.value = '';
         expenseDescInput.value = '';
+        await saveData();
     }
 
     function showResultSection() {
@@ -129,24 +163,22 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateSplit();
     }
     
-    function resetCalculation() {
+    async function resetCalculation() {
         if (confirm('現在の費用リストをすべて消去して、費用の入力からやり直しますか？\n（参加者リストは残ります）')) {
             expenses = [];
-            saveData();
-            updateExpenseList();
+            await saveData();
             resultSection.classList.add('hidden');
             expenseSection.classList.remove('hidden');
         }
     }
     
-    function restoreState() {
-        if (participants.length > 0) {
-            updateParticipantList();
-            updatePayerSelect();
-            updateExpenseList();
-            setupSection.classList.add('hidden');
-            expenseSection.classList.remove('hidden');
-            createParticipantCheckboxes();
+    function renderUI() {
+        updateParticipantList();
+        updatePayerSelect();
+        createParticipantCheckboxes();
+        updateExpenseList();
+        if(resultSection.classList.contains('hidden') === false) {
+            calculateSplit();
         }
     }
     
@@ -206,9 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const involved = expense.for;
             const numInvolved = involved.length;
             if (numInvolved === 0) return;
-
             const costPerPerson = expense.amount / numInvolved;
-            
             balances[expense.payer] += expense.amount;
             involved.forEach(person => {
                 balances[person] -= costPerPerson;
@@ -227,7 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const debtor = debtors[0];
             const creditor = creditors[0];
             const amount = Math.min(debtor.amount, creditor.amount);
-            transactions.push({ from: debtor.name, to: creditor.name, amount: Math.round(amount) });
+            if (amount > 0.01) {
+                transactions.push({ from: debtor.name, to: creditor.name, amount: Math.round(amount) });
+            }
             debtor.amount -= amount;
             creditor.amount -= amount;
             if (debtor.amount < 0.01) debtors.shift();
@@ -251,6 +283,4 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-    
-    restoreState();
 });

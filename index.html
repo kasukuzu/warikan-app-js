@@ -3,77 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>割り勘アプリ</title>
+    <title>リアルタイム割り勘アプリ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div class="container">
-        <h1>割り勘アプリ</h1>
-
-        <div id="setup-section">
-            <h2>参加者を追加</h2>
+        <!-- グループ参加画面 -->
+        <div id="group-section">
+            <h1>リアルタイム割り勘アプリ</h1>
+            <p>共有したいメンバーと、同じ「グループID」を入力してください。</p>
             <div class="input-group">
-                <input type="text" id="participant-name" placeholder="名前">
-                <button id="add-participant-btn">追加</button>
+                <input type="text" id="group-id-input" placeholder="グループID (例: tokyo-trip)">
+                <button id="join-group-btn">開始 / 参加</button>
             </div>
-            <ul id="participant-list"></ul>
-            <button id="start-expense-btn" class="btn-primary">費用入力へ進む</button>
-            <button id="clear-storage-btn" class="btn-danger">保存した全データを消去</button>
         </div>
 
-        <div id="expense-section" class="hidden">
-            <h2>費用を入力</h2>
-            <div class="form-group">
-                <label for="payer-select">支払った人:</label>
-                <select id="payer-select"></select>
-            </div>
-            <div class="form-group">
-                <label for="expense-amount">金額 (円):</label>
-                <input type="number" id="expense-amount" placeholder="5000">
-            </div>
-            <div class="form-group">
-                <label for="expense-desc">内容:</label>
-                <input type="text" id="expense-desc" placeholder="夕食代">
+        <!-- アプリ本体（初期状態では非表示） -->
+        <div id="main-app" class="hidden">
+            <h2 id="current-group-id-display"></h2>
+            <!-- ステップ1: 参加者入力エリア -->
+            <div id="setup-section">
+                <h3>参加者を追加</h3>
+                <div class="input-group">
+                    <input type="text" id="participant-name" placeholder="名前">
+                    <button id="add-participant-btn">追加</button>
+                </div>
+                <ul id="participant-list"></ul>
+                <button id="start-expense-btn" class="btn-primary">費用入力へ進む</button>
+                <button id="clear-storage-btn" class="btn-danger">このグループの全データを消去</button>
             </div>
 
-            <div class="form-group">
-                <label>対象者:</label>
-                <div class="radio-group">
-                    <input type="radio" id="for-all" name="expense-for" value="all" checked>
-                    <label for="for-all">全員</label>
-                    <input type="radio" id="for-some" name="expense-for" value="some">
-                    <label for="for-some">一部のメンバー</label>
+            <!-- ステップ2: 費用入力エリア -->
+            <div id="expense-section" class="hidden">
+                <h3>費用を入力</h3>
+                <div class="form-group">
+                    <label for="payer-select">支払った人:</label>
+                    <select id="payer-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="expense-amount">金額 (円):</label>
+                    <input type="number" id="expense-amount" placeholder="5000">
+                </div>
+                <div class="form-group">
+                    <label for="expense-desc">内容:</label>
+                    <input type="text" id="expense-desc" placeholder="夕食代">
+                </div>
+                <div class="form-group">
+                    <label>対象者:</label>
+                    <div class="radio-group">
+                        <input type="radio" id="for-all" name="expense-for" value="all" checked>
+                        <label for="for-all">全員</label>
+                        <input type="radio" id="for-some" name="expense-for" value="some">
+                        <label for="for-some">一部のメンバー</label>
+                    </div>
+                </div>
+                <div id="participants-checkbox-container" class="form-group hidden">
+                    <label>支払いに含まれるメンバー:</label>
+                    <div id="participants-checkboxes"></div>
+                </div>
+                <button id="add-expense-btn">費用を追加</button>
+                <h4>費用リスト</h4>
+                <ul id="expense-list"></ul>
+                <div class="button-group">
+                    <button id="back-to-setup-btn" class="btn-secondary">戻る</button>
+                    <button id="calculate-btn" class="btn-primary">計算する</button>
                 </div>
             </div>
 
-            <div id="participants-checkbox-container" class="form-group hidden">
-                <label>支払いに含まれるメンバー:</label>
-                <div id="participants-checkboxes"></div>
-            </div>
-
-            <button id="add-expense-btn">費用を追加</button>
-            <h3>費用リスト</h3>
-            <ul id="expense-list"></ul>
-            <div class="button-group">
-                <button id="back-to-setup-btn" class="btn-secondary">戻る</button>
-                <button id="calculate-btn" class="btn-primary">計算する</button>
-            </div>
-        </div>
-
-        <div id="result-section" class="hidden">
-            <h2>計算結果</h2>
-            <p><strong>総支出額:</strong> <span id="total-amount">0</span>円</p>
-            <p><strong>一人当たりの目安:</strong> <span id="per-person-cost">0</span>円</p>
-            <h3>精算方法</h3>
-            <div id="transactions"></div>
-            <div class="button-group">
-                <button id="back-to-expense-btn" class="btn-secondary">戻る</button>
-                <button id="reset-calculation-btn" class="btn-danger">この計算をリセット</button>
+            <!-- ステップ3: 結果表示エリア -->
+            <div id="result-section" class="hidden">
+                <h3>計算結果</h3>
+                <p><strong>総支出額:</strong> <span id="total-amount">0</span>円</p>
+                <p><strong>一人当たりの目安:</strong> <span id="per-person-cost">0</span>円</p>
+                <h4>精算方法</h4>
+                <div id="transactions"></div>
+                <div class="button-group">
+                    <button id="back-to-expense-btn" class="btn-secondary">戻る</button>
+                    <button id="reset-calculation-btn" class="btn-danger">この計算をリセット</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK の読み込み -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
+    <script>
+      // あなたのウェブアプリのFirebase設定
+      const firebaseConfig = {
+        apiKey: "AIzaSyAbwNsN_WdS5YD1EwTTi8iKtnyIWn0Yryk",
+        authDomain: "warikan-app-realtime.firebaseapp.com",
+        projectId: "warikan-app-realtime",
+        storageBucket: "warikan-app-realtime.appspot.com",
+        messagingSenderId: "830398331256",
+        appId: "1:830398331256:web:3d2b5cced142996322f08d",
+        measurementId: "G-RT1JB37PC4"
+      };
+
+      // Firebaseを初期化
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+    
     <script src="script.js"></script>
 </body>
 </html>
