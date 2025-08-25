@@ -19,6 +19,7 @@
             </div>
             <ul id="participant-list"></ul>
             <button id="start-expense-btn" class="btn-primary">費用入力へ進む</button>
+            <button id="clear-storage-btn" class="btn-danger">保存した全データを消去</button>
         </div>
 
         <div id="expense-section" class="hidden">
@@ -35,20 +36,41 @@
                 <label for="expense-desc">内容:</label>
                 <input type="text" id="expense-desc" placeholder="夕食代">
             </div>
+
+            <div class="form-group">
+                <label>対象者:</label>
+                <div class="radio-group">
+                    <input type="radio" id="for-all" name="expense-for" value="all" checked>
+                    <label for="for-all">全員</label>
+                    <input type="radio" id="for-some" name="expense-for" value="some">
+                    <label for="for-some">一部のメンバー</label>
+                </div>
+            </div>
+
+            <div id="participants-checkbox-container" class="form-group hidden">
+                <label>支払いに含まれるメンバー:</label>
+                <div id="participants-checkboxes"></div>
+            </div>
+
             <button id="add-expense-btn">費用を追加</button>
-            
             <h3>費用リスト</h3>
             <ul id="expense-list"></ul>
-            <button id="calculate-btn" class="btn-primary">計算する</button>
+            <div class="button-group">
+                <button id="back-to-setup-btn" class="btn-secondary">戻る</button>
+                <button id="calculate-btn" class="btn-primary">計算する</button>
+            </div>
         </div>
 
         <div id="result-section" class="hidden">
             <h2>計算結果</h2>
-            <p><strong>合計金額:</strong> <span id="total-amount">0</span>円</p>
-            <p><strong>一人当たりの負担額:</strong> <span id="per-person-cost">0</span>円</p>
+            <p><strong>総支出額:</strong> <span id="total-amount">0</span>円</p>
+            <p><strong>一人当たりの目安:</strong> <span id="per-person-cost">0</span>円</p>
             <h3>精算方法</h3>
             <div id="transactions"></div>
-            <button id="restart-btn" class="btn-secondary">最初からやり直す</button>
+            <div class="button-group">
+                <button id="back-to-expense-btn" class="btn-secondary">戻る</button>
+                <button id="reset-calculation-btn" class="btn-danger">この計算をリセット</button>
+            </div>
         </div>
     </div>
 

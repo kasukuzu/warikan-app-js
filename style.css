@@ -7,6 +7,7 @@ body {
     padding: 20px;
     line-height: 1.6;
 }
+
 .container {
     width: 100%;
     max-width: 500px;
@@ -15,19 +16,52 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-h1, h2 { text-align: center; color: #1c2b4d; }
-.input-group { display: flex; margin-bottom: 15px; }
-.form-group { margin-bottom: 15px; }
-label { display: block; margin-bottom: 5px; font-weight: bold; }
+
+h1, h2 {
+    text-align: center;
+    color: #1c2b4d;
+}
+
+h3 {
+    margin-top: 25px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+
+.input-group {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
 input[type="text"], input[type="number"], select {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box; /* paddingを含めてwidthを100%にする */
+    box-sizing: border-box;
 }
-input[type="text"] { flex: 1; margin-right: 10px; }
-ul { list-style-type: none; padding: 0; margin-bottom: 20px; }
+
+input[type="text"] {
+    flex: 1;
+    margin-right: 10px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
 ul li {
     background-color: #f7f7f7;
     padding: 10px;
@@ -36,7 +70,9 @@ ul li {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    font-size: 14px;
 }
+
 button {
     padding: 10px 15px;
     border: none;
@@ -47,16 +83,94 @@ button {
     font-size: 15px;
     transition: background-color 0.2s;
 }
-button:hover { background-color: #4a5a7b; }
-.btn-primary { width: 100%; padding: 12px; font-size: 16px; background-color: #007bff; }
-.btn-primary:hover { background-color: #0069d9; }
-.btn-secondary { width: 100%; padding: 12px; font-size: 16px; background-color: #6c757d; margin-top: 20px; }
-.btn-secondary:hover { background-color: #5a6268; }
-.hidden { display: none; }
+
+button:hover {
+    background-color: #4a5a7b;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    background-color: #007bff;
+    margin-top: 5px;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+}
+
+.btn-secondary {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.btn-danger {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    background-color: #dc3545;
+    margin-top: 15px;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.hidden {
+    display: none;
+}
+
 #transactions p {
     background-color: #e8f6f3;
     padding: 12px;
     border-left: 4px solid #1abc9c;
     border-radius: 4px;
     margin: 5px 0;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.button-group > button {
+    flex: 1;
+    margin-top: 0;
+}
+
+.radio-group {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.radio-group input[type="radio"] {
+    width: auto;
+}
+
+#participants-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    background-color: #f7f7f7;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
 }
