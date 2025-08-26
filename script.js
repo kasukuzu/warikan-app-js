@@ -25,15 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateBtn = document.getElementById('calculate-btn');
     const totalAmountSpan = document.getElementById('total-amount');
     const perPersonCostSpan = document.getElementById('per-person-cost');
-    const transactionsDiv = document.getElementById('transactions');
+    const transactionsListDiv = document.getElementById('transactions-list');
     const backToExpenseBtn = document.getElementById('back-to-expense-btn');
     const resetCalculationBtn = document.getElementById('reset-calculation-btn');
 
     // --- アプリのグローバル変数 ---
     let participants = [];
     let expenses = [];
+    let settlements = [];
     let groupDocRef = null;
-    let unsubscribe = null; // リアルタイムリスナーを停止するための変数
+    let unsubscribe = null;
 
     // --- イベントリスナー ---
     joinGroupBtn.addEventListener('click', joinGroup);
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearStorageBtn.addEventListener('click', clearAllData);
     addExpenseBtn.addEventListener('click', addExpense);
     calculateBtn.addEventListener('click', showResultSection);
+    payerSelect.addEventListener('change', () => { createParticipantCheckboxes(); });
     backToSetupBtn.addEventListener('click', () => {
         expenseSection.classList.add('hidden');
         setupSection.classList.remove('hidden');
@@ -81,9 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = doc.data();
                 participants = data.participants || [];
                 expenses = data.expenses || [];
+                settlements = data.settlements || [];
                 renderUI();
             } else {
-                groupDocRef.set({ participants: [], expenses: [] });
+                groupDocRef.set({ participants: [], expenses: [], settlements: [] });
             }
         });
     }
@@ -91,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveData() {
         if (!groupDocRef) return;
         try {
-            await groupDocRef.set({ participants, expenses });
+            await groupDocRef.set({ participants, expenses, settlements });
         } catch (error) {
             console.error("データの保存に失敗しました: ", error);
         }
@@ -101,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm('本当にこのグループの全データを消去しますか？参加している全員のデータが消えます。')) {
             participants = [];
             expenses = [];
+            settlements = [];
             await saveData();
             alert('データを消去しました。');
         }
@@ -136,14 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             document.querySelectorAll('#participants-checkboxes input:checked')
               .forEach(box => involvedParticipants.push(box.value));
+            if (!involvedParticipants.includes(payer)) {
+                involvedParticipants.push(payer);
+            }
         }
 
         if (!payer || !(amount > 0) || !description) {
             alert('支払者、金額、内容を正しく入力してください。');
             return;
         }
-        if (expenseFor === 'some' && involvedParticipants.length < 1) {
-            alert('対象者を1人以上選択してください。');
+        if (expenseFor === 'some' && involvedParticipants.length <= 1) {
+            alert('対象者を自分以外に1人以上選択してください。');
             return;
         }
 
@@ -164,8 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     async function resetCalculation() {
-        if (confirm('現在の費用リストをすべて消去して、費用の入力からやり直しますか？\n（参加者リストは残ります）')) {
+        if (confirm('現在の費用リストと完了した精算をすべて消去して、費用の入力からやり直しますか？\n（参加者リストは残ります）')) {
             expenses = [];
+            settlements = [];
             await saveData();
             resultSection.classList.add('hidden');
             expenseSection.classList.remove('hidden');
@@ -177,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePayerSelect();
         createParticipantCheckboxes();
         updateExpenseList();
-        if(resultSection.classList.contains('hidden') === false) {
+        if (resultSection.classList.contains('hidden') === false) {
             calculateSplit();
         }
     }
@@ -203,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function createParticipantCheckboxes() {
         participantsCheckboxes.innerHTML = '';
+        const currentPayer = payerSelect.value;
         participants.forEach(name => {
             const div = document.createElement('div');
             div.className = 'checkbox-item';
@@ -210,10 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
             checkbox.type = 'checkbox';
             checkbox.id = `check-${name}`;
             checkbox.value = name;
-            checkbox.checked = true;
             const label = document.createElement('label');
             label.htmlFor = `check-${name}`;
             label.textContent = name;
+            if (name === currentPayer) {
+                checkbox.disabled = true;
+                checkbox.checked = false;
+                label.style.color = '#aaa';
+            } else {
+                checkbox.checked = true;
+            }
             div.appendChild(checkbox);
             div.appendChild(label);
             participantsCheckboxes.appendChild(div);
@@ -229,57 +244,111 @@ document.addEventListener('DOMContentLoaded', () => {
             expenseList.appendChild(li);
         });
     }
+
+    async function completeTransaction(from, to, amount) {
+        if (confirm(`${from}さんから${to}さんへの${amount.toLocaleString()}円の支払いを完了しますか？`)) {
+            settlements.push({ from, to, amount });
+            await saveData();
+        }
+    }
     
     function calculateSplit() {
-        const balances = {};
-        participants.forEach(p => { balances[p] = 0; });
+        // Step 1: 誰が誰にいくら借りているかのマトリックスを作成
+        const debts = {};
+        participants.forEach(p1 => {
+            debts[p1] = {};
+            participants.forEach(p2 => {
+                if (p1 !== p2) debts[p1][p2] = 0;
+            });
+        });
 
+        // Step 2: 各費用ごとに、支払者への借りを計算
         expenses.forEach(expense => {
+            const payer = expense.payer;
+            const amount = expense.amount;
             const involved = expense.for;
             const numInvolved = involved.length;
             if (numInvolved === 0) return;
-            const costPerPerson = expense.amount / numInvolved;
-            balances[expense.payer] += expense.amount;
-            involved.forEach(person => {
-                balances[person] -= costPerPerson;
+
+            const individualCosts = {};
+            const baseCost = Math.floor(amount / numInvolved);
+            involved.forEach(p => { individualCosts[p] = baseCost; });
+            const remainder = amount % numInvolved;
+            const shuffledInvolved = [...involved].sort(() => 0.5 - Math.random());
+            for (let i = 0; i < remainder; i++) {
+                individualCosts[shuffledInvolved[i]] += 1;
+            }
+
+            involved.forEach(beneficiary => {
+                if (beneficiary !== payer) {
+                    debts[beneficiary][payer] += individualCosts[beneficiary];
+                }
             });
         });
-        
-        const debtors = [];
-        const creditors = [];
-        for (const person in balances) {
-            if (balances[person] < 0) debtors.push({ name: person, amount: -balances[person] });
-            else if (balances[person] > 0) creditors.push({ name: person, amount: balances[person] });
-        }
 
-        const transactions = [];
-        while (debtors.length > 0 && creditors.length > 0) {
-            const debtor = debtors[0];
-            const creditor = creditors[0];
-            const amount = Math.min(debtor.amount, creditor.amount);
-            if (amount > 0.01) {
-                transactions.push({ from: debtor.name, to: creditor.name, amount: Math.round(amount) });
+        // Step 3: 完了した精算を反映させる
+        settlements.forEach(s => {
+            if(debts[s.from] && typeof debts[s.from][s.to] !== 'undefined') {
+                debts[s.from][s.to] -= s.amount;
             }
-            debtor.amount -= amount;
-            creditor.amount -= amount;
-            if (debtor.amount < 0.01) debtors.shift();
-            if (creditor.amount < 0.01) creditors.shift();
+        });
+
+        // Step 4: 逆方向の貸し借りを相殺する
+        const participantsCopy = [...participants];
+        for (let i = 0; i < participantsCopy.length; i++) {
+            for (let j = i + 1; j < participantsCopy.length; j++) {
+                const p1 = participantsCopy[i];
+                const p2 = participantsCopy[j];
+                
+                const debt1to2 = debts[p1][p2] || 0;
+                const debt2to1 = debts[p2][p1] || 0;
+
+                if (debt1to2 > debt2to1) {
+                    debts[p1][p2] = debt1to2 - debt2to1;
+                    debts[p2][p1] = 0;
+                } else {
+                    debts[p2][p1] = debt2to1 - debt1to2;
+                    debts[p1][p2] = 0;
+                }
+            }
         }
 
+        // Step 5: 最終的な精算リストを作成
+        const transactions = [];
+        for (const debtor in debts) {
+            for (const creditor in debts[debtor]) {
+                const amount = Math.round(debts[debtor][creditor]);
+                if (amount > 0) {
+                    transactions.push({ from: debtor, to: creditor, amount: amount });
+                }
+            }
+        }
+
+        // --- 結果表示 ---
         const overallTotal = expenses.reduce((sum, exp) => sum + exp.amount, 0);
         const overallPerPerson = participants.length > 0 ? overallTotal / participants.length : 0;
         
         totalAmountSpan.textContent = overallTotal.toLocaleString();
         perPersonCostSpan.textContent = `約 ${Math.round(overallPerPerson).toLocaleString()}`;
         
-        transactionsDiv.innerHTML = '';
+        transactionsListDiv.innerHTML = '';
         if (transactions.length === 0) {
-            transactionsDiv.textContent = '精算の必要はありません。';
+            const p = document.createElement('p');
+            p.textContent = '精算の必要はありません。';
+            transactionsListDiv.appendChild(p);
         } else {
             transactions.forEach(t => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'transaction-item';
                 const p = document.createElement('p');
                 p.textContent = `› ${t.from}さん → ${t.to}さん へ ${t.amount.toLocaleString()}円 支払う`;
-                transactionsDiv.appendChild(p);
+                const completeBtn = document.createElement('button');
+                completeBtn.className = 'btn-complete';
+                completeBtn.textContent = '完了';
+                completeBtn.onclick = () => completeTransaction(t.from, t.to, t.amount);
+                itemDiv.appendChild(p);
+                itemDiv.appendChild(completeBtn);
+                transactionsListDiv.appendChild(itemDiv);
             });
         }
     }

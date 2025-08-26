@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div class="container">
-        <!-- グループ参加画面 -->
         <div id="group-section">
             <h1>リアルタイム割り勘アプリ</h1>
             <p>共有したいメンバーと、同じ「グループID」を入力してください。</p>
@@ -18,10 +18,8 @@
             </div>
         </div>
 
-        <!-- アプリ本体（初期状態では非表示） -->
         <div id="main-app" class="hidden">
             <h2 id="current-group-id-display"></h2>
-            <!-- ステップ1: 参加者入力エリア -->
             <div id="setup-section">
                 <h3>参加者を追加</h3>
                 <div class="input-group">
@@ -33,7 +31,6 @@
                 <button id="clear-storage-btn" class="btn-danger">このグループの全データを消去</button>
             </div>
 
-            <!-- ステップ2: 費用入力エリア -->
             <div id="expense-section" class="hidden">
                 <h3>費用を入力</h3>
                 <div class="form-group">
@@ -70,13 +67,12 @@
                 </div>
             </div>
 
-            <!-- ステップ3: 結果表示エリア -->
             <div id="result-section" class="hidden">
                 <h3>計算結果</h3>
                 <p><strong>総支出額:</strong> <span id="total-amount">0</span>円</p>
                 <p><strong>一人当たりの目安:</strong> <span id="per-person-cost">0</span>円</p>
                 <h4>精算方法</h4>
-                <div id="transactions"></div>
+                <div id="transactions-list"></div>
                 <div class="button-group">
                     <button id="back-to-expense-btn" class="btn-secondary">戻る</button>
                     <button id="reset-calculation-btn" class="btn-danger">この計算をリセット</button>
@@ -85,7 +81,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK の読み込み -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 

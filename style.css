@@ -127,14 +127,6 @@ button:hover {
     display: none;
 }
 
-#transactions p {
-    background-color: #e8f6f3;
-    padding: 12px;
-    border-left: 4px solid #1abc9c;
-    border-radius: 4px;
-    margin: 5px 0;
-}
-
 .button-group {
     display: flex;
     gap: 10px;
@@ -173,4 +165,32 @@ button:hover {
 .checkbox-item input[type="checkbox"] {
     width: auto;
     margin-right: 8px;
+}
+
+.transaction-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #e8f6f3;
+    padding: 12px;
+    border-left: 4px solid #1abc9c;
+    border-radius: 4px;
+    margin: 5px 0;
+}
+
+.transaction-item p {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.btn-complete {
+    background-color: #28a745;
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-left: 15px;
+    flex-shrink: 0;
+}
+
+.btn-complete:hover {
+    background-color: #218838;
 }
